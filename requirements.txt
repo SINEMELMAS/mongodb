@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+transformers
+spacy
+textblob
+langdetect
+pymongo
+nltk
