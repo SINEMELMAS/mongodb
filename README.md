@@ -139,4 +139,3 @@ Feel free to contribute or report issues!
 
 MIT License
 
-```
