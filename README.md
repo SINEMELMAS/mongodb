@@ -1,70 +1,142 @@
-# mongodb
-#To find summary of text with fastapi and make database with datas in the mongodb
-from fastapi import FastAPI, Body, HTTPException
-from langdetect import detect
-import spacy
-from collections import Counter
-from textblob import TextBlob
-from transformers import pipeline
-import nltk
-from pymongo import MongoClient
-from pymongo.server_api import ServerApi
+# 🧠 Text Summarization & Sentiment Analysis API with FastAPI and MongoDB
 
-nltk.download('words')
-from nltk.corpus import words
+This project provides an API endpoint to process English texts by:
+- Detecting the language
+- Performing sentiment analysis
+- Extracting keywords
+- Summarizing the text using a pre-trained transformer model
+- Storing the results in a **MongoDB Atlas** database
 
-app = FastAPI()
+All functionalities are exposed via a FastAPI POST endpoint.
 
-uri = "mongodb+srv://<Username>:<Password>@cluster0.m03cb.mongodb.net/mongo?retryWrites=true&w=majority"
+---
+
+## 🚀 Features
+
+- 🌐 Language detection using `langdetect`
+- 😊 Sentiment analysis via `TextBlob`
+- 🧠 Keyword extraction with `spaCy` and `collections.Counter`
+- ✂️ Text summarization using `facebook/bart-large-cnn` transformer via HuggingFace
+- 💾 Data persistence using **MongoDB Atlas** (cloud MongoDB database)
+
+---
+
+## 📦 Requirements
+
+Install all dependencies with pip:
+
+```bash
+pip install fastapi uvicorn transformers spacy textblob langdetect pymongo nltk
+python -m textblob.download_corpora
+python -m spacy download en_core_web_sm
+````
+
+---
+
+## 📡 How to Run
+
+```bash
+uvicorn main:app --reload
+```
+
+Once the server is running, send a POST request to:
+
+```
+POST http://127.0.0.1:8000/summary
+```
+
+### 📝 Request Body
+
+```json
+{
+  "text": "Your English text here"
+}
+```
+
+---
+
+## 🧾 Sample Response
+
+```json
+{
+  "inserted_id": "64c...e5a",
+  "summary_data": {
+    "Sentiment": "Positive",
+    "Keywords": ["AI", "OpenAI", "model", "applications", "ChatGPT"],
+    "Summary": "OpenAI develops AI for humanity's benefit. Models like ChatGPT are widely used."
+  }
+}
+```
+
+---
+
+## ☁️ MongoDB Atlas Integration
+
+### What is MongoDB Atlas?
+
+MongoDB Atlas is a fully managed cloud database developed by the creators of MongoDB. It allows you to host and scale MongoDB databases in the cloud (AWS, GCP, or Azure) and connect securely from your apps.
+
+### 🔧 Connection URI Format:
+
+```python
+uri = "mongodb+srv://<username>:<password>@cluster0.mongodb.net/<dbname>?retryWrites=true&w=majority"
+```
+
+Replace:
+
+* `<username>` and `<password>` with your MongoDB credentials
+* `<dbname>` with your database name (e.g., `mongo`)
+
+Ensure your cluster is configured to **accept connections from all IP addresses** or your specific IP (Colab users: use `0.0.0.0/0` for testing).
+
+### Example Usage:
+
+```python
 client = MongoClient(uri, server_api=ServerApi(version='1'))
-db = client["mongo"] #database name
-collection = db["sum_"] #collection name
+db = client["mongo"]  # Database
+collection = db["sum_"]  # Collection
+```
 
-english_words = set(words.words())
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-nlp = spacy.load('en_core_web_sm')
+Each request will save the input text and its:
 
-@app.post('/summary', summary="Summary of your text", tags=["sum"])
-async def summarization_(text: str = Body(..., embed=True)):
-    try:
-        check_language = detect(text)
-        if check_language == "en":
-            doc = nlp(text)
-            blob = TextBlob(text)
+* Sentiment
+* Extracted keywords
+* Summary
 
-            if blob.sentiment.polarity > 0:
-                sentiment = "Positive"
-            elif blob.sentiment.polarity < 0:
-                sentiment = "Negative"
-            else:
-                sentiment = "Neutral"
+---
 
-            words_list = [token.text for token in doc if not token.is_stop and not token.is_punct]
-            freq_word = Counter(words_list)
-            keywords = [word for word, freq in freq_word.most_common(5)]
+## 📂 Project Structure
 
-            summary = summarizer(text, max_length=100, min_length=30, do_sample=False)
-            sum_dic = {
-                "Sentiment": sentiment,
-                "Keywords": keywords,
-                "Summary": summary[0]['summary_text']
-            }
+```
+main.py           # FastAPI app with summarization logic
+requirements.txt  # (optional) list of all dependencies
+```
 
-            result = collection.insert_one({
-                "text": text,
-                "Sentiment": sentiment,
-                "Keywords": keywords,
-                "Summary": summary[0]['summary_text']
-            })
+---
 
-            if result.acknowledged:
-                return {
-                    "inserted_id": str(result.inserted_id),
-                    "summary_data": sum_dic
-                }
-            else:
-                raise HTTPException(status_code=500, detail="Failed to insert data into MongoDB")
-        else:
-            raise HTTPException(status_code=400, detail="Sorry, this program only supports the English language!")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {e}")
+## 🔒 Note on Language Support
+
+This project only processes English texts. Requests in other languages will return an HTTP 400 error.
+
+---
+
+## 📬 Future Improvements
+
+* Add support for multiple languages
+* JWT-based authentication
+* Query endpoint to retrieve summaries from MongoDB
+
+---
+
+## 🧑‍💻 Author
+
+Created by \[Your Name]
+Feel free to contribute or report issues!
+
+---
+
+## 🛡 License
+
+MIT License
+
+```
